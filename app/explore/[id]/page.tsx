@@ -2,76 +2,75 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const trails = {
-    "hampta-pass": {
-        name: "Hampta Pass",
-        location: "Himachal Pradesh",
-        difficulty: "Moderate",
-        distance: "35 km",
-        duration: "5 Days",
-        rating: "4.9",
-        reviews: 128,
-        image:
-            "https://images.unsplash.com/photo-1464278533981-50106e6176b1?auto=format&fit=crop&w=1600&q=90",
-        description:
-            "Hampta Pass is one of Himachal Pradesh's most dramatic trekking experiences. The trail moves through green valleys, forests, high mountain passes and spectacular Himalayan landscapes.",
-    },
-
-    tadiandamol: {
-        name: "Tadiandamol",
-        location: "Karnataka",
-        difficulty: "Moderate",
-        distance: "15 km",
-        duration: "2 Days",
-        rating: "4.8",
-        reviews: 96,
-        image:
-            "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1600&q=90",
-        description:
-            "Tadiandamol is one of Karnataka's most beautiful high-altitude treks, offering peaceful forests, rolling grasslands and panoramic Western Ghats views.",
-    },
-
-    kheerganga: {
-        name: "Kheerganga",
-        location: "Himachal Pradesh",
-        difficulty: "Easy",
-        distance: "14 km",
-        duration: "1 Day",
-        rating: "4.7",
-        reviews: 214,
-        image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=90",
-        description:
-            "Kheerganga is a popular beginner-friendly trek through the Parvati Valley. The route combines forest trails with beautiful mountain scenery.",
-    },
-
-    kudremukh: {
-        name: "Kudremukh",
-        location: "Karnataka",
-        difficulty: "Hard",
-        distance: "22 km",
-        duration: "2 Days",
-        rating: "4.9",
-        reviews: 87,
-        image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=90",
-        description:
-            "Kudremukh offers a challenging Western Ghats adventure through rolling grasslands, forests and dramatic mountain ridges.",
-    },
+type Trail = {
+    id: number;
+    name: string;
+    location: string;
+    state?: string;
+    difficulty: string;
+    distance: string;
+    duration: string;
+    rating?: string;
+    reviews?: number;
+    image_url?: string;
+    description: string;
+    best_time?: string;
 };
 
 export default function TrailDetailsPage() {
     const params = useParams();
 
-    const id = params.id as keyof typeof trails;
+    const id = params.id as string;
 
-    const trail = trails[id];
+    const [trail, setTrail] = useState<Trail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    if (!trail) {
+    useEffect(() => {
+        async function fetchTrail() {
+            try {
+                const response = await fetch(`/api/trails/${id}`);
+
+                if (!response.ok) {
+                    throw new Error("Trail not found");
+                }
+
+                const data = await response.json();
+
+                setTrail(data);
+
+            } catch (err) {
+                console.error(err);
+                setError("Trail not found");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        if (id) {
+            fetchTrail();
+        }
+    }, [id]);
+
+    if (loading) {
+        return (
+            <main className="min-h-screen bg-[#07100d] text-white flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-5xl mb-4">🏔️</div>
+
+                    <p className="text-zinc-400">
+                        Loading trail...
+                    </p>
+                </div>
+            </main>
+        );
+    }
+
+    if (error || !trail) {
         return (
             <main className="min-h-screen bg-[#07100d] text-white flex items-center justify-center px-6">
-
                 <div className="text-center">
 
                     <div className="text-6xl mb-5">
@@ -90,7 +89,6 @@ export default function TrailDetailsPage() {
                     </Link>
 
                 </div>
-
             </main>
         );
     }
@@ -99,6 +97,7 @@ export default function TrailDetailsPage() {
         <main className="min-h-screen bg-[#07100d] text-white">
 
             {/* NAVBAR */}
+
             <nav className="border-b border-white/10">
 
                 <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
@@ -107,7 +106,9 @@ export default function TrailDetailsPage() {
                         href="/"
                         className="text-2xl font-black"
                     >
-                        Trail<span className="text-lime-400">Xplore</span>
+                        Trail<span className="text-lime-400">
+                            Xplore
+                        </span>
                     </Link>
 
                     <Link
@@ -122,13 +123,14 @@ export default function TrailDetailsPage() {
             </nav>
 
 
-            {/* HERO IMAGE */}
+            {/* HERO */}
+
             <section className="max-w-7xl mx-auto px-6 pt-8">
 
                 <div className="relative h-[420px] md:h-[550px] overflow-hidden rounded-[2rem]">
 
                     <img
-                        src={trail.image}
+                        src={trail.image_url}
                         alt={trail.name}
                         className="w-full h-full object-cover"
                     />
@@ -139,6 +141,7 @@ export default function TrailDetailsPage() {
 
                         <p className="text-lime-400 font-semibold mb-3">
                             📍 {trail.location}
+                            {trail.state ? `, ${trail.state}` : ""}
                         </p>
 
                         <h1 className="text-5xl md:text-7xl font-black">
@@ -147,9 +150,11 @@ export default function TrailDetailsPage() {
 
                         <div className="flex flex-wrap gap-3 mt-5">
 
-                            <span className="rounded-full bg-white/10 backdrop-blur px-5 py-2">
-                                ⭐ {trail.rating}
-                            </span>
+                            {trail.rating && (
+                                <span className="rounded-full bg-white/10 backdrop-blur px-5 py-2">
+                                    ⭐ {trail.rating}
+                                </span>
+                            )}
 
                             <span className="rounded-full bg-white/10 backdrop-blur px-5 py-2">
                                 {trail.difficulty}
@@ -165,11 +170,13 @@ export default function TrailDetailsPage() {
 
 
             {/* DETAILS */}
+
             <section className="max-w-7xl mx-auto px-6 py-12">
 
                 <div className="grid lg:grid-cols-3 gap-8">
 
                     {/* DESCRIPTION */}
+
                     <div className="lg:col-span-2">
 
                         <p className="text-lime-400 font-semibold uppercase tracking-widest text-sm">
@@ -188,6 +195,7 @@ export default function TrailDetailsPage() {
 
 
                     {/* QUICK INFO */}
+
                     <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
 
                         <h3 className="text-xl font-bold mb-5">
@@ -226,15 +234,29 @@ export default function TrailDetailsPage() {
                                 </span>
                             </div>
 
-                            <div className="flex justify-between">
-                                <span className="text-zinc-500">
-                                    Reviews
-                                </span>
+                            {trail.best_time && (
+                                <div className="flex justify-between">
+                                    <span className="text-zinc-500">
+                                        Best time
+                                    </span>
 
-                                <span className="font-semibold">
-                                    {trail.reviews}
-                                </span>
-                            </div>
+                                    <span className="font-semibold">
+                                        {trail.best_time}
+                                    </span>
+                                </div>
+                            )}
+
+                            {trail.reviews !== undefined && (
+                                <div className="flex justify-between">
+                                    <span className="text-zinc-500">
+                                        Reviews
+                                    </span>
+
+                                    <span className="font-semibold">
+                                        {trail.reviews}
+                                    </span>
+                                </div>
+                            )}
 
                         </div>
 
@@ -248,6 +270,7 @@ export default function TrailDetailsPage() {
 
 
                 {/* ITINERARY */}
+
                 <div className="mt-16">
 
                     <p className="text-lime-400 font-semibold uppercase tracking-widest text-sm">
@@ -285,6 +308,54 @@ export default function TrailDetailsPage() {
 
                         ))}
 
+                    </div>
+
+                </div>
+
+
+                {/* COMING NEXT */}
+
+                <div className="mt-20 grid md:grid-cols-3 gap-6">
+
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7">
+                        <div className="text-4xl mb-4">🌿</div>
+
+                        <h3 className="text-2xl font-bold">
+                            Flora
+                        </h3>
+
+                        <p className="text-zinc-400 mt-3">
+                            Discover the plants and vegetation
+                            that shape this ecosystem.
+                        </p>
+                    </div>
+
+
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7">
+                        <div className="text-4xl mb-4">🐾</div>
+
+                        <h3 className="text-2xl font-bold">
+                            Fauna
+                        </h3>
+
+                        <p className="text-zinc-400 mt-3">
+                            Learn about wildlife and species
+                            found around the trail.
+                        </p>
+                    </div>
+
+
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7">
+                        <div className="text-4xl mb-4">🧑‍🤝‍🧑</div>
+
+                        <h3 className="text-2xl font-bold">
+                            Local Communities
+                        </h3>
+
+                        <p className="text-zinc-400 mt-3">
+                            Understand the people, traditions
+                            and knowledge connected to this landscape.
+                        </p>
                     </div>
 
                 </div>

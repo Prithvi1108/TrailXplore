@@ -15,11 +15,23 @@ export async function GET(
     try {
         const { id } = await params;
 
-        const { data, error } = await supabase
+        let query = supabase
             .from("trails")
-            .select("*")
-            .eq("id", id)
-            .maybeSingle();
+            .select("*");
+
+        // If the URL contains a number, search by database ID.
+        if (/^\d+$/.test(id)) {
+            query = query.eq("id", id);
+        } else {
+            // Otherwise treat it as a slug.
+            // Example: hampta-pass → Hampta Pass
+            const trailName = decodeURIComponent(id)
+                .replace(/-/g, " ");
+
+            query = query.ilike("name", trailName);
+        }
+
+        const { data, error } = await query.maybeSingle();
 
         if (error) {
             console.error("Supabase GET error:", error);
@@ -30,7 +42,6 @@ export async function GET(
             );
         }
 
-        // Trail does not exist
         if (!data) {
             return NextResponse.json(
                 { error: "Trail not found" },
@@ -49,8 +60,6 @@ export async function GET(
         );
     }
 }
-
-
 // =========================
 // PUT /api/trails/:id
 // =========================
